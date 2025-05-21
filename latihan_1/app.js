@@ -4,6 +4,9 @@ const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 const { title } = require('process');
 
+// middleware
+const {globalError , notFound} = require('./app/middleware/error-handler');
+const {NotFound } = require('./app/errors/NotFound')
 const app = express();
 
 app.use(logger('dev'));
@@ -12,6 +15,7 @@ app.use(express.urlencoded({ extended: false }));
 app.use(cookieParser());
 app.use(express.static(path.join(__dirname, 'public')));
 
+// route
 // menampilkan hello world...
 // get (path , (request , response))...
 app.get("/" , (_,res) => {
@@ -62,30 +66,33 @@ app.get(`/todos/:id` , (req,res) => {
     res.send(`Ini adalah product dengan ID : ${id}`)
 })
 
-// menggunakan query params...
-app.get(`/products` , (req,res) => {
-    // endPoint akan menjadi seperti ini localhost:3000/products?category=kesehatan
-    const {id} = req.query;
-    const products = [
-            {id: 1 , name:"Rokok" },
-            {id: 2 , name:"Sabun" },
-            {id: 3 , name:"Mobil" },
-            {id: 4 , name:"Qur'an" }
-        ]
-    if(id) {
-        const data = products.filter(item => item.id == id);
-        if(data.length > 0) {
-            res.json({data})
-        }else {
-            res.json({
-                status: "error",
-                message: `Product dengan ID : ${id} belum tersedia`
-            })
-        }
-    }else {
-        res.json({products})
-    }
+// EndPoin /student...
+app.get("/student" , (req, res)=> {
+    const {id,category} = req.query;
+
+    // simulasi data...
+    const data = [
+        {id:1 , name:'Zumal' , category:'student'},
+        {id:2 , name:'Farhan' , category:'student'},
+        {id:3 , name:'Fadil' , category:'oldStudent'},
+        {id:4 , name:'Sena' , category:'student'},
+        {id:5 , name:'Rizal' , category:'oldStudent'},
+    ];
+    
+    // melakukan filter untuk category dan id dari student
+    const result = data.filter(item => item.category == category || item.id == id); 
+
+    // menggunakn throw new (customError) untuk mengembalikan error dari backEnd...
+    if(!result.length && (category || id)) throw new NotFound("Student not found")
+    
+    // mengembalikan response berupa json...
+    return res.json((category || id) ? result : data)
 })
 
+// menangkap error yang terjadi di BackEnd...
+app.use(globalError)
+
+// app use , merupakan middleware untuk semua jadi selama route tidak ada di atas maka akan menampilkan error custom kita
+app.use(notFound)
 
 module.exports = app;
